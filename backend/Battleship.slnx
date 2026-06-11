@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Battleship.Api/Battleship.Api.csproj" />
+  <Project Path="Battleship.Core/Battleship.Core.csproj" />
+  <Project Path="Battleship.Tests/Battleship.Tests.csproj" />
+</Solution>

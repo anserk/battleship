@@ -1,6 +1,6 @@
-namespace Battleship.Tests;
-
 using Battleship.Core;
+
+namespace Battleship.Tests;
 
 public class ShipTests
 {
