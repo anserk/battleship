@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Battleship.Api.Games;
 using Battleship.Api.Summaries;
 
@@ -91,6 +92,66 @@ public sealed class GameApiTests
         Assert.Equal(17, summary.TotalShots);
     }
 
+    [Fact]
+    public async Task FireShot_WhenGameDoesNotExist_ReturnsNotFound()
+    {
+        using var factory = new TestApplicationFactory();
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync(
+            $"/games/{Guid.NewGuid()}/shots",
+            new ShotRequest(1, 1));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetGame_WhenGameExists_ReturnsPublicGameState()
+    {
+        using var factory = new TestApplicationFactory();
+        var client = factory.CreateClient();
+        var game = await CreateGame(client);
+
+        var response = await client.GetAsync($"/games/{game.GameId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var currentGame = await response.Content.ReadFromJsonAsync<GameResponse>();
+
+        Assert.NotNull(currentGame);
+        Assert.Equal(game.GameId, currentGame.GameId);
+        Assert.Equal(10, currentGame.BoardSize);
+        Assert.Equal(0, currentGame.ShotsFired);
+        Assert.Equal(5, currentGame.ShipsRemaining);
+        Assert.False(currentGame.IsWon);
+        Assert.Empty(currentGame.Shots);
+    }
+
+    [Fact]
+    public async Task CreateGame_DoesNotExposeShipPositions()
+    {
+        using var factory = new TestApplicationFactory();
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsync("/games", null);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        await AssertDoesNotExposeShipPositions(response);
+    }
+
+    [Fact]
+    public async Task GetGame_DoesNotExposeShipPositions()
+    {
+        using var factory = new TestApplicationFactory();
+        var client = factory.CreateClient();
+        var game = await CreateGame(client);
+
+        var response = await client.GetAsync($"/games/{game.GameId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await AssertDoesNotExposeShipPositions(response);
+    }
+
     private static async Task<GameResponse> CreateGame(HttpClient client)
     {
         var response = await client.PostAsync("/games", null);
@@ -130,5 +191,16 @@ public sealed class GameApiTests
         {
             yield return new ShotRequest(x, 5);
         }
+    }
+
+    private static async Task AssertDoesNotExposeShipPositions(HttpResponseMessage response)
+    {
+        await using var stream = await response.Content.ReadAsStreamAsync();
+        using var document = await JsonDocument.ParseAsync(stream);
+
+        Assert.False(document.RootElement.TryGetProperty("ships", out _));
+        Assert.False(document.RootElement.TryGetProperty("shipPositions", out _));
+        Assert.False(document.RootElement.TryGetProperty("coordinates", out _));
+
     }
 }
