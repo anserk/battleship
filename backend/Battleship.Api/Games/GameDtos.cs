@@ -13,12 +13,12 @@ public sealed record GameResponse(
 public sealed record ShotResponse(
     int X,
     int Y,
-    ShotOutcome Outcome); // TODO: fix serialization for this.
+    ShotOutcome Outcome);
 
 public sealed record PostShotResponse(
     int X,
     int Y,
-    ShotOutcome Outcome, // TODO: fix serialization for this.
+    ShotOutcome Outcome,
     string? SunkShipName,
     int ShotsFired,
     int ShipsRemaining,
